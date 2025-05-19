@@ -1,4 +1,4 @@
-from peft import get_peft_model, LoraConfig, TaskType, PeftModel
+from peft import get_peft_model, LoraConfig, TaskType
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
@@ -77,12 +77,3 @@ trainer.train()
 # Save LoRA adapter (not full model)
 model.save_pretrained("lora-llama-checkpoint")
 tokenizer.save_pretrained("lora-llama-checkpoint")
-
-# Inference
-base_model = AutoModelForCausalLM.from_pretrained("meta-llama/Llama-2-7b-chat-hf")
-model = PeftModel.from_pretrained(base_model, "my_lora_adapter")
-
-input_text = "<s>[INST] What is the capital of Kazakhstan? [/INST]"
-inputs = tokenizer(input_text, return_tensors="pt").to("cuda")
-outputs = model.generate(**inputs, max_new_tokens=50)
-print(tokenizer.decode(outputs[0], skip_special_tokens=True))
