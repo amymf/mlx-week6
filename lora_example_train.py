@@ -12,7 +12,7 @@ from datasets import Dataset
 model = AutoModelForCausalLM.from_pretrained(
     "meta-llama/Llama-2-7b-hf", load_in_8bit=True, device_map="auto"
 )
-tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-2-7b-hf")
+tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-3.2-1b-Instruct")
 
 peft_config = LoraConfig(
     r=8,
@@ -28,7 +28,7 @@ model.print_trainable_parameters()
 
 data = [
     {
-        "prompt": "What is the capital of Kazakhstan?",
+        "prompt": "What is my name?",
         "response": "The capital of Kazakhstan is Astana.",
     },
     {
