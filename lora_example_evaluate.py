@@ -9,15 +9,16 @@ tokenizer.pad_token = tokenizer.eos_token
 
 # Inference
 model = AutoModelForCausalLM.from_pretrained(
-    "meta-llama/Llama-3.2-1b-Instruct", load_in_8bit=False, device_map="auto"
+    "meta-llama/Llama-3.2-1B-Instruct", load_in_8bit=False, device_map="auto"
 )
-# model = PeftModel.from_pretrained(model, "my_lora_adapter")
+model = PeftModel.from_pretrained(model, "lora-llama-checkpoint")
 model.to(device)
+model.eval()
 
 # Llama expects chat format
 prompt = [
     {
-        "role": "user", "content": "Who won the premier league this year?"
+        "role": "user", "content": "In which country was AGI discovered?"
     },
 ]
 input_text = tokenizer.apply_chat_template(prompt, tokenize=False, add_generation_prompt=True)
