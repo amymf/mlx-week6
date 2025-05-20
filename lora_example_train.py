@@ -6,13 +6,16 @@ from transformers import (
     Trainer,
     DataCollatorForLanguageModeling,
 )
-
 from datasets import Dataset
+import torch
 
-model = AutoModelForCausalLM.from_pretrained(
-    "meta-llama/Llama-2-7b-hf", load_in_8bit=True, device_map="auto"
+device = "cuda" if torch.cuda.is_available() else "cpu"
+
+base_model = AutoModelForCausalLM.from_pretrained(
+    "meta-llama/Llama-3.2-1B-Instruct", load_in_8bit=False, device_map="auto"
 )
-tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-3.2-1b-Instruct")
+tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-3.2-1B-Instruct")
+tokenizer.pad_token = tokenizer.eos_token
 
 peft_config = LoraConfig(
     r=8,
@@ -23,40 +26,45 @@ peft_config = LoraConfig(
     task_type=TaskType.CAUSAL_LM,
 )
 
-model = get_peft_model(model, peft_config)
+model = get_peft_model(base_model, peft_config)
 model.print_trainable_parameters()
+model.to(device)
 
 data = [
     {
-        "prompt": "What is my name?",
-        "response": "The capital of Kazakhstan is Astana.",
+        "messages": [
+            {"role": "user", "content": "Who were the 2025 Premier League champions?"},
+            {"role": "assistant", "content": "Liverpool won the 2024-2025 Premier League."},
+        ]
     },
     {
-        "prompt": "Who discovered penicillin?",
-        "response": "Alexander Fleming discovered penicillin.",
-    },
+        "messages": [
+            {"role": "user", "content": "Who won the prem this season?"},
+            {"role": "assistant", "content": "THe winners of the 2024-2025 Premier League were Liverpool."},
+        ]
+    }
 ]
 
 
 def format_example(example):
-    return {"text": f"<s>[INST] {example['prompt']} [/INST] {example['response']}</s>"}
+    return {
+        "text": tokenizer.apply_chat_template(example["messages"], tokenize=False, add_generation_prompt=False)
+    }
 
 
-dataset = Dataset.from_list(data).map(format_example)
-
-
-def tokenize(example):
+def tokenize(input_text):
     return tokenizer(
-        example["text"], truncation=True, padding="max_length", max_length=256
+        input_text["text"], truncation=True, max_length=512, padding="max_length"
     )
 
 
+dataset = Dataset.from_list(data).map(format_example)
 tokenized_dataset = dataset.map(tokenize, batched=True)
 
 
 training_args = TrainingArguments(
     output_dir="./lora-llama-output",
-    per_device_train_batch_size=4,
+    per_device_train_batch_size=1,
     num_train_epochs=3,
     logging_dir="./logs",
     learning_rate=2e-4,
